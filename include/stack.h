@@ -1,4 +1,4 @@
-#pragma once
+#pragma once//
 #include <exception>
 #include <iostream>
 #include <locale>
