@@ -1,42 +1,30 @@
-#pragma once
+#pragma once//
 #include <exception>
 #include <iostream>
 #include <locale>
 #include <string>
+#include <stack>
 
 template<class T>
 	class Node
 	{
 	private:
 		int key;
-		int h_def;
 		T data;
-		Node<T>* p;
 		Node<T>* left;
 		Node<T>* right;
+		int height;
 		Node(int key = 0, T data = T())
 		{
-			this->key = key;
 			this->data = data;
-			h_def = 0;
-			p = left = right = 0;
+			this->key = key;
+			left = right = nullptr;
+			height = 1;
 		}
 	public:
 		int GetKey()
 		{
 			return key;
-		}
-		int GetH_def()
-		{
-			return h_def;
-		}
-		T GetData()
-		{
-			return data;
-		}
-		Node<T>* GetParrent()
-		{
-			return p;
 		}
 		Node<T>* GetLeft()
 		{
@@ -46,11 +34,6 @@ template<class T>
 		{
 			return right;
 		}
-		void Print()
-		{
-			std::cout << "(" << key << ", " << data << ")";
-		}
-		
 		template<typename T> friend class AVL_Tree;
 	};
 template <class T>
@@ -58,548 +41,203 @@ class AVL_Tree
 {
 private:
 	Node<T>* root;
-	int size;
-	void rotateLeft(Node<T>*);
-	void rotateRight(Node<T>*);
-	void bigRotateLeft(Node<T>*);
-	void bigRotateRight(Node<T>*);
-	Node<T>* UnderTheTreeMin(Node<T>*);
-	Node<T>* UnderTheTreeMax(Node<T>*);
-	void Distruct(Node<T>*);
+	int Height(Node<T>*);
+	void refreshHeight(Node<T>*);
+	int GetBalance(Node<T>*);
+	Node<T>* rotateLeft(Node<T>*);
+	Node<T>* rotateRight(Node<T>*);
+	Node<T>* Balance(Node<T>*);
+	Node<T>* ins(Node<T>*, int, T);
+	Node<T>* rem(Node<T>*, int);
+	Node<T>* search_min(Node<T>*);
+	Node<T>* remove_min(Node<T>*);
 public:
-	Node<T>* t_max();
-	Node<T>* t_min();
-	Node<T>* search(int);
-	void remove(int);
 	AVL_Tree();
-	void insert(int, T);
-	void Print(Node<T>*);
-	Node<T>* GetRoot()
-	{
-		return root;
-	}
-	~AVL_Tree();
-
-
+	void remove(Node<T>*, int);
+	void insert(Node<T>*, int, T);
+	Node<T>* search(Node<T>*, int);
+	Node<T>* GetRoot();
+	Node<T>* t_min(Node<T>*);
+	Node<T>* t_max(Node<T>*);
 };
 template<class T>
 AVL_Tree<T>::AVL_Tree()
 {
-	size = 0;
 	root = nullptr;
 }
 template<class T>
-void AVL_Tree<T>::rotateLeft(Node<T>* a)
+void AVL_Tree<T>::remove(Node<T>* a, int key)
 {
-	Node<T>* b = a->right;
-	Node<T>* tmp_1 = b->left;
-	b->left = a;
-	Node<T>* tmp_2 = a->p;
-	a->p = b;
-	a->right = tmp_1;
-	if (tmp_1 != nullptr)
-	{
-		tmp_1->p = a;
-	}
-	b->p = tmp_2;
-	if (tmp_2 == nullptr)
-	{
-		root = b;
-	}
-	else
-		if (a == tmp_2->left)
-		{
-			tmp_2->left = b;
-		}
-		else
-		{
-			tmp_2->right = b;
-		}
-	if (b->h_def == -1)
-	{
-		a->h_def = 0;
-		b->h_def = 0;
-	}
-	else
-		if (b->h_def == 0)
-		{
-			a->h_def = -1;
-			b->h_def = 1;
-		}
+	root = rem(a, key);
 }
 template<class T>
-void AVL_Tree<T>::rotateRight(Node<T>* a)
+Node<T>* AVL_Tree<T>::GetRoot()
 {
-	Node<T>* b = a->left;
-	Node<T>* tmp_1 = b->right;
-	b->right = a;
-	Node<T>* tmp_2 = a->p;
-	a->p = b;
-	a->left = tmp_1;
-	if (tmp_1 != nullptr)
-	{
-		tmp_1->p = a;
-	}
-	b->p = tmp_2;
-	if (tmp_2 == nullptr)
-	{
-		root = b;
-	}
-	else
-		if (a == tmp_2->left)
-		{
-			tmp_2->left = b;
-		}
-		else
-		{
-			tmp_2->right = b;
-		}
-	if (b->h_def == 1)
-	{
-		a->h_def = 0;
-		b->h_def = 0;
-	}
-	else
-		if (b->h_def == 0)
-		{
-			a->h_def = 1;
-			b->h_def = -1;
-		}
+	return root;
 }
 template<class T>
-void AVL_Tree<T>::bigRotateLeft(Node<T>* a)
+Node<T>* AVL_Tree<T>::t_min(Node<T>* a)
 {
-	rotateRight(a->right);
-	rotateLeft(a);
-}
-template<class T>
-void AVL_Tree<T>::bigRotateRight(Node<T>* a)
-{
-	rotateLeft(a->left);
-	rotateRight(a);
-}
-template<class T>
-Node<T>* AVL_Tree<T>::UnderTheTreeMin(Node<T>* a)
-{
-	while (a->left != nullptr)
-	{
-		a = a->left;
-	}
+	if (a->left != nullptr)
+		return t_min(a->left);
 	return a;
 }
 template<class T>
-Node<T>* AVL_Tree<T>::UnderTheTreeMax(Node<T>* a)
+inline Node<T>* AVL_Tree<T>::t_max(Node<T>* a)
 {
-	while (a->right != nullptr)
-	{
-		a = a->right;
-	}
+	if (a->right != nullptr)
+		return t_max(a->right);
 	return a;
 }
-
 template<class T>
-void AVL_Tree<T>::insert(int key, T data)
+int AVL_Tree<T>::Height(Node<T>* a)
 {
-	Node<T>* new_Node = new Node<T>(key, data);
-	Node<T>* a = root;
-	if (a == nullptr)
-	{
-		root = new_Node;
-	}
+	if (a != nullptr)
+		return a->height;
 	else
+		return 0;
+}
+template<class T>
+void AVL_Tree<T>::refreshHeight(Node<T>* a)
+{
+	if (Height(a->left) > Height(a->right))
+		a->height = Height(a->left) + 1;
+	else
+		a->height = Height(a->right) + 1;
+}
+template<class T>
+int AVL_Tree<T>::GetBalance(Node<T>* a)
+{
+	return Height(a->left) - Height(a->right);
+}
+template<class T>
+Node<T>* AVL_Tree<T>::rotateLeft(Node<T>* a)
+{
+	Node<T>* tmp = a->right;
+	a->right = tmp->left;
+    tmp->left = a;
+	refreshHeight(a);
+	refreshHeight(tmp);
+	return tmp;
+}
+template<class T>
+Node<T>* AVL_Tree<T>::rotateRight(Node<T>* a)
+{
+	Node<T>* tmp = a->left;
+	a->left = tmp->right;
+	tmp->right = a;
+	refreshHeight(a);
+	refreshHeight(tmp);
+	return tmp;
+}
+template<class T>
+Node<T>* AVL_Tree<T>::Balance(Node<T>* a)
+{
+	if (a != nullptr)
 	{
-		Node<T>* b;
-		while (a != nullptr)
+		refreshHeight(a);
+		if (GetBalance(a) == -2)
 		{
-			b = a;
-			if (new_Node->key < a->key)
+			if (GetBalance(a->right) == 1)
+				a->right = rotateRight(a->right);
+			return rotateLeft(a);
+		}
+		else
+			if (GetBalance(a) == 2)
 			{
-				a = a->left;
+				if (GetBalance(a->left) == -1)
+					a->left = rotateLeft(a->left);
+				return rotateRight(a);
 			}
+	}
+	return a;
+}
+template<class T>
+Node<T>* AVL_Tree<T>::ins(Node<T>* a, int key, T data)
+{
+		if (a == nullptr)
+		{
+			return new Node<T>(key, data);
+		}
+		else
+			if (key < a->key)
+				a->left = ins(a->left, key, data);
 			else
-				if (new_Node->key > a->key)
-				{
-					a = a->right;
-				}
+				if (key > a->key)
+					a->right = ins(a->right, key, data);
 				else
 				{
-					std::exception ex("Ключ с таким значением уже есть в дереве!");
+					std::exception ex("Элемент с данным ключом уже есть в дереве");
 					throw ex;
 				}
-		}
-		if (new_Node->key < b->key)
-		{
-			b->left = new_Node;
-		}
-		else
-		{
-			b->right = new_Node;
-		}
-		new_Node->p = b;
-		a = new_Node;
-		size++;
-		if (a == b->right)
-		{
-			b->h_def--;
-		}
-		else
-		{
-			b->h_def++;
-		}
-		a = b;
-		b = b->p;
-		if (a->h_def != 0)
-		{
-			while (b != nullptr)
-			{
-				if (a == b->right)
-				{
-					b->h_def--;
-					if (b->h_def == 0)
-					{
-						break;
-					}
-					else
-						if (b->h_def == -1)
-						{
-							a = a->p;
-							b = b->p;
-						}
-						else
-						{
-							if (a->h_def == 1)
-							{
-								a = a->p;
-								b = b->p;
-								bigRotateLeft(a);
-							}
-							else
-							{
-								a = a->p;
-								b = b->p;
-								rotateLeft(a);
-							}
-						}
-				}
-				else
-				{
-					b->h_def++;
-					if (b->h_def == 0)
-					{
-						break;
-					}
-					else
-						if (b->h_def == 1)
-						{
-							a = a->p;
-							b = b->p;
-						}
-						else
-						{
-							if (a->h_def == -1)
-							{
-								a = a->p;
-								b = b->p;
-								bigRotateRight(a);
-							}
-							else
-							{
-								a = a->p;
-								b = b->p;
-								rotateRight(a);
-							}
-						}
-				}
-				if (b != a->p)
-				{
-					if (b == nullptr)
-					{
-						break;
-					}
-					else
-						if (a->key > b->key)
-						{
-							a = b->right;
-						}
-						else
-							if (a->key < b->key)
-							{
-								a = b->left;
-							}
-
-				}
-				if (a->h_def == 0)
-				{
-					break;
-				}
-			}
-		}
-
-	}
+	return Balance(a);
 }
-
 template<class T>
-void AVL_Tree<T>::Print(Node<T>* a)
+void AVL_Tree<T>::insert(Node<T>* a, int key, T data)
 {
-	if (a != nullptr)
+	root = ins(a, key, data);
+}
+template<class T>
+Node<T>* AVL_Tree<T>::search(Node<T>* a, int key)
+{
+	if (a == nullptr)
 	{
-		Print(a->left);
-		a->Print();
-		Print(a->right);
-	}
-}
-
-template<class T>
-void AVL_Tree<T>::Distruct(Node<T>* a)
-{
-	if (a != nullptr)
-	{
-		Distruct(a->left);
-		Distruct(a->right);
-		delete[] a;
-	}
-}
-
-template<class T>
-AVL_Tree<T>::~AVL_Tree()
-{
-	Distruct(root);
-}
-
-
-template<class T>
-Node<T>* AVL_Tree<T>::t_max()
-{
-	if (root == nullptr)
-	{
-		std::exception ex("Дерево пустое");
+		std::exception ex("В дереве нет элемента с таким ключом");
 		throw ex;
 	}
-	Node<T>* a = root;
-	while (a->right != nullptr)
-	{
-		a = a->right;
-	}
-	return a;
-}
-template<class T>
-Node<T>* AVL_Tree<T>::t_min()
-{
-	if (root == nullptr)
-	{
-		std::exception ex("Дерево пустое");
-		throw ex;
-	}
-	Node<T>* a = root;
-	while (a->left != nullptr)
-	{
-		a = a->left;
-	}
-	return a;
-}
-
-template<class T>
-Node<T>* AVL_Tree<T>::search(int key)
-{
-	if (root == nullptr)
-	{
-		std::exception ex("Дерево пустое");
-		throw ex;
-	}
-	Node<T>* a = root;
-	while (a != nullptr)
-	{
-		if (a->key > key)
-		{
-			a = a->left;
-		}
-		else
-			if (a->key < key)
-			{
-				a = a->right;
-			}
-			else
-			{
-				return a;
-			}
-	}
-	std::exception ex1("Элемента с данным ключом нет в дереве");
-	throw ex1;
-}
-
-template<class T>
-void AVL_Tree<T>::remove(int key)
-{
-	Node<T>* del_node = search(key);
-	Node<T>* a;
-	Node<T>* b;
-	if (del_node->left == nullptr && del_node->right == nullptr)
-	{
-		a = del_node;
-		b = a->p;
-		if (del_node == root)
-		{
-			root = nullptr;
-		}
-	}
+	if (key < a->key)
+		return search(a->left, key);
 	else
+		if (key > a->key)
+			return search(a->right, key);
+		else
+			return a;
+}
+template<class T>
+Node<T>* AVL_Tree<T>::search_min(Node<T>* a)
+{
+	if (a->left != nullptr)
+		return search_min(a->left);
+	else
+		return a;
+}
+template<class T>
+Node<T>* AVL_Tree<T>::remove_min(Node<T>* a)
+{
+	if (a->left == nullptr)
+		return a->right;
+	a->left = remove_min(a->right);
+	return Balance(a);
+}
+template<class T>
+Node<T>* AVL_Tree<T>::rem(Node<T>* a, int key)
+{
+	if (a == nullptr)
 	{
-		if (del_node->h_def > 0)
-		{
-			a = UnderTheTreeMax(del_node->left);
-		}
+		std::exception ex("В дереве нет элемента с таким ключом");
+		throw ex;
+	}
+	if (key < a->key)
+		a->left = rem(a->left, key);
+	else
+		if (key > a->key)
+			a->right = rem(a->right, key);
 		else
 		{
-			a = UnderTheTreeMin(del_node->right);
+			Node<T>* tmp_1 = a->left;
+			Node<T>* tmp_2 = a->right;
+			delete[] a;
+			if (tmp_2 == nullptr)
+				return tmp_1;
+			Node<T>* min = search_min(tmp_2);
+			min->right = remove_min(tmp_2);
+			min->left = tmp_1;
+			return Balance(min);
 		}
-		del_node->key = a->key;
-		del_node->data = a->data;
-		b = a->p;
-		
-			if (a == UnderTheTreeMax(del_node->left))
-			{
-				if (del_node->left == a && a->left != nullptr)
-				{
-					b->left = a->left;
-					a->left->p = b;
-					del_node = a;
-					a = b->left;
-				}
-				if (a->left != nullptr)
-				{
-					b->right = a->left;
-					a->left->p = b;
-					del_node = a;
-					a = b->right;
-				}
-				else
-				{
-					del_node = a;
-				}
-			}
-			else
-				if (a == UnderTheTreeMin(del_node->right))
-				{
-					if (del_node->right == a && a->right != nullptr)
-					{
-						b->right = a->right;
-						a->right->p = b;
-						del_node = a;
-						a = b->right;
-					}
-					else
-					     if (a->right != nullptr)
-					     {
-						  b->left = a->right;
-						  a->right->p = b;
-						  del_node = a;
-						  a = b->left;
-					      }
-					        else
-					        {
-						        del_node = a;
-					        }
-				}
-		
-	}
-		while (b != nullptr)
-		{
-			if (a == b->right)
-			{
-				b->h_def++;
-				if (b->h_def == 0)
-				{
-					a = a->p;
-					b = b->p;
-				}
-				else
-					if (b->h_def == 2)
-					{
-						if (b->left->h_def == -1)
-						{
-							b = b->p;
-							a = a->p;
-							bigRotateRight(a);
-						}
-						else
-						{
-							b = b->p;
-							a = a->p;
-							rotateRight(a);
-						}
-					}
-					else
-					{
-						break;
-					}
-
-			}
-			else
-			{
-				b->h_def--;
-				if (b->h_def == 0)
-				{
-					a = a->p;
-					b = b->p;
-				}
-				else
-					if (b->h_def == -2)
-					{
-						if (b->right->h_def == 1)
-						{
-							b = b->p;
-							a = a->p;
-							bigRotateLeft(a);
-						}
-						else
-						{
-							b = b->p;
-							a = a->p;
-							rotateLeft(a);
-						}
-					}
-					else
-					{
-						break;
-					}
-			}
-			if (b != a->p)
-			{
-				if (b == nullptr)
-				{
-					break;
-				}
-				else
-					if (a->key > b->key)
-					{
-						a = b->right;
-					}
-					else
-						if (a->key < b->key)
-						{
-							a = b->left;
-						}
-			}
-			if (a->h_def == -1 || a->h_def == 1)
-			{
-				break;
-			}
-
-		}
-		if (del_node != nullptr && del_node->p != nullptr)
-		{
-			if (del_node->p->left == del_node)
-			{
-				del_node->p->left = nullptr;
-			}
-			else
-				if (del_node->p->right == del_node)
-				{
-					del_node->p->right = nullptr;
-				}
-		}
-		delete[] del_node;
-	size--;
+	return Balance(a);
 }
+
+
+
 
 
